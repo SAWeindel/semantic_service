@@ -8,11 +8,13 @@ Prerequisites
        GRAPHDB_PASSWORD
        GRAPHDB_REPOSITORY
 
-2. Upload ontologies via your external tool:
-       ontology/Calculator.ttl          → default graph (TBox / schema)
-       ontology/CalculatorInstances.ttl → named graph <http://demo.org/CalculatorInstances>
+2. Upload ontology to GraphDB:
+       ontology/Calculator.ttl
 
-3. Run:
+3. Install (using python 3.13+):
+       poetry install
+
+4. Run:
        python run_demo.py
 
 What this script does
