@@ -23,8 +23,7 @@ from typing import Optional
 from graph_db_interface.utils.iri import IRI
 from kapps_ogm import OGM
 
-from Service.Workflow import WorkflowPayload, WorkflowResponse
-from Service.Service import Service
+from semantic_service import Service, WorkflowPayload, WorkflowResponse
 
 CALC = "http://demo.org/Calculator#"
 

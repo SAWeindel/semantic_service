@@ -42,8 +42,8 @@ from graph_db_interface.utils.graph_db_credentials import GraphDBCredentials
 from graph_db_interface.utils.iri import IRI
 from kapps_ogm import OGM
 
-from Usecase_Demo_Calculator.Calculator import Calculator
-from Usecase_Demo_Calculator.User import User
+from Calculator import Calculator
+from User import User
 
 # ---------------------------------------------------------------------------
 # Constants
