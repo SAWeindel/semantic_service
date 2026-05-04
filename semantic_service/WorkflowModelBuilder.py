@@ -138,6 +138,10 @@ def _create_model(
         # Extract field name from property IRI using graph_db_interface utility
         field_name = property_iri.lined
 
+        # If datatype is a reference, use IRI as type
+        if isinstance(python_type, IRI):
+            python_type = IRI
+
         # Create field definition: (type, default_value)
         # Using ... as default means required field in Pydantic
         model_creation_dict[field_name] = (python_type, ...)
