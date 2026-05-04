@@ -1,0 +1,51 @@
+@prefix : <http://w3id.org/circularfactory/Workflow#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+# Ontology
+#################################################################
+
+: rdf:type owl:Ontology ;
+    rdfs:label "Generic Workflow Ontology" ;
+    rdfs:comment "Abstract ontology defining workflow patterns with payloads and responses, designed for reuse across different workflow-based systems" .
+
+#################################################################
+# Abstract Workflow Classes
+#################################################################
+
+:Workflow rdf:type owl:Class ;
+    rdfs:comment "Abstract class representing a computational workflow or service operation" .
+
+#################################################################
+# Workflow Object Properties
+#################################################################
+
+:hasWorkflow rdf:type owl:ObjectProperty ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range :Workflow ;
+    rdfs:comment "Relates a resource to its available workflows" ;
+    owl:inverseOf :isWorkflowOf .
+
+:isWorkflowOf rdf:type owl:ObjectProperty ;
+    rdfs:domain :Workflow ;
+    rdfs:range cfc:Resource ;
+    rdfs:comment "Relates a workflow to the resource it operates on" ;
+    owl:inverseOf :hasWorkflow .
+
+:accepts rdf:type owl:ObjectProperty ;
+    rdfs:domain :Workflow .
+
+:returns rdf:type owl:ObjectProperty ;
+    rdfs:domain :Workflow .
+
+#################################################################
+# Workflow Datatype Properties
+#################################################################
+
+:accessibleAt rdf:type owl:DatatypeProperty ;
+    rdfs:domain :Workflow ;
+    rdfs:range xsd:anyURI ;
+    rdfs:comment "URL endpoint where the workflow can be invoked via REST API" .

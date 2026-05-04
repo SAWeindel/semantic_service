@@ -1,0 +1,162 @@
+@prefix calc: <http://demo.org/Calculator#> .
+@prefix cfc: <http://www.sfb1574.kit.edu/core#> .
+@prefix wf: <http://w3id.org/circularfactory/Workflow#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+# Ontology
+#################################################################
+
+calc: rdf:type owl:Ontology ;
+    owl:imports <http://w3id.org/circularfactory/Workflow> ;
+    rdfs:label "Calculator Demo Ontology" ;
+    rdfs:comment "Ontology for the calculator demo, illustrating the Service pattern with simple arithmetic workflows." .
+
+#################################################################
+# Classes
+#################################################################
+
+calc:Calculator rdf:type owl:Class ;
+    rdfs:subClassOf cfc:Resource ;
+    rdfs:comment "A calculator resource that exposes arithmetic workflows." .
+
+calc:User rdf:type owl:Class ;
+    rdfs:subClassOf cfc:Resource ;
+    rdfs:comment "A user resource that polls and calls the calculator's workflows on a timer." .
+
+#################################################################
+# Properties
+#################################################################
+
+calc:hasNumberOfUses rdf:type owl:DatatypeProperty ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Counts how many workflow invocations this resource has performed or handled." .
+
+calc:operandA rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:double ;
+    rdfs:comment "First operand of a binary arithmetic operation." .
+
+calc:operandB rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:double ;
+    rdfs:comment "Second operand of a binary arithmetic operation." .
+
+calc:value rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:double ;
+    rdfs:comment "Single numeric input for a unary operation." .
+
+calc:inputString rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string ;
+    rdfs:comment "String input to be repeated by the RepeatWorkflow." .
+
+calc:repeatCount rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Number of times to repeat the input string. Must be in [0, 42]." .
+
+#################################################################
+# Payload Classes
+# Each payload class is an owl:Class whose fields are expressed
+# as rdfs:subClassOf owl:Restriction triples, matching the
+# pattern expected by WorkflowModelBuilder._create_model().
+#################################################################
+
+# Shared binary payload: operandA (double) + operandB (double)
+_:BinaryPayload a owl:Class ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty calc:operandA ;
+        owl:hasValue xsd:double
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty calc:operandB ;
+        owl:hasValue xsd:double
+    ] .
+
+# Unary payload: a single value (double)
+_:UnaryPayload a owl:Class ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty calc:value ;
+        owl:hasValue xsd:double
+    ] .
+
+# Empty payload — no extra restrictions (RandomWorkflow takes no input)
+_:EmptyPayload a owl:Class .
+
+# Repeat payload: a string (inputString) + an integer (repeatCount)
+_:RepeatPayload a owl:Class ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty calc:inputString ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty calc:repeatCount ;
+        owl:hasValue xsd:integer
+    ] .
+
+#################################################################
+# Workflow Classes
+#
+# Pattern (mirroring FlexConveyorSystem.ttl):
+#   WorkflowClass rdfs:subClassOf [
+#       a owl:Restriction ;
+#       owl:onProperty wf:accepts ;
+#       owl:hasValue <PayloadClass>
+#   ] .
+#################################################################
+
+calc:AddWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:BinaryPayload
+    ] ;
+    rdfs:comment "Workflow that adds two floats. Raises an error if either operand equals 42.0." .
+
+calc:SubtractWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:BinaryPayload
+    ] ;
+    rdfs:comment "Workflow that subtracts b from a. Raises an error if either operand equals 42.0." .
+
+calc:RandomWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:EmptyPayload
+    ] ;
+    rdfs:comment "Workflow that returns a random float in [0, 1). Takes no input." .
+
+calc:VoidWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:UnaryPayload
+    ] ;
+    rdfs:comment "Workflow that receives a float and discards it. Raises an error if the value equals 42.0." .
+
+calc:RepeatWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:RepeatPayload
+    ] ;
+    rdfs:comment "Workflow that returns inputString repeated repeatCount times. repeatCount must be in [0, 42]." .
