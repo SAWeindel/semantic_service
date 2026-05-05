@@ -58,6 +58,8 @@ from transformer_cell import TransformerCell
 from plan_healer import PlanHealer
 from special_machine import SpecialMachine
 
+TriplesLike = list[tuple[IRI, IRI, IRI]]
+
 # ---------------------------------------------------------------------------
 # Namespace constants
 # ---------------------------------------------------------------------------
@@ -129,7 +131,7 @@ def upload_ontologies(db) -> None:
 
 def create_instances(ogm: OGM) -> None:
     ogm.db.clear_graph(NAMED_GRAPH)
-    triples = [
+    triples: TriplesLike = [
         (PC_ID,  RDF_TYPE, IRI(f"{CFOP}ProductionControl")),
         (ILS_ID, RDF_TYPE, IRI(f"{CFOP}IntralogisticSystem")),
         (MS_ID,  RDF_TYPE, IRI(f"{CFOP}ManipulationSystem")),
