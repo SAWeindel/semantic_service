@@ -46,11 +46,17 @@ from kapps_ogm import OGM
 
 from Calculator import Calculator
 from User import User
+from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 NAMED_GRAPH = IRI("http://demo.org/CalculatorInstances")
+
+# ---------------------------------------------------------------------------
+# Load environment variables
+# ---------------------------------------------------------------------------
+load_dotenv()
 CALC = "http://demo.org/Calculator#"
 INST = "http://demo.org/CalculatorInstances#"
 
