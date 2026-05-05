@@ -526,3 +526,83 @@ cfop:ReportStepResultWorkflow a owl:Class ;
         owl:onProperty wf:accepts ;
         owl:hasValue cfop:QualityUpdatePayload
     ] .
+
+#################################################################
+# Knowledge-Graph State Records
+#
+# These classes are instantiated at runtime by the stations.
+# All properties carry rdfs:domain = the record class so that
+# OGM ClassSpec.specify() finds them via its domain-lookup query.
+#################################################################
+
+# ---- OperationRecord — dispatched work item, polled by stations ----
+
+cfop:OperationRecord a owl:Class ;
+    rdfs:label "Operation Record" ;
+    rdfs:comment "Lightweight lifecycle record for a station-level operation dispatched via the knowledge graph. Stations poll for pending records assigned to them, execute the work, and write status transitions and results back."@en .
+
+cfop:rec_workpieceRef a owl:DatatypeProperty ;
+    rdfs:label "workpiece ref" ;
+    rdfs:comment "IRI string of the workpiece/product this operation applies to." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+cfop:rec_status a owl:DatatypeProperty ;
+    rdfs:label "record status" ;
+    rdfs:comment "Lifecycle status: pending | running | done | failed." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+cfop:rec_assignedStationId a owl:DatatypeProperty ;
+    rdfs:label "assigned station ID" ;
+    rdfs:comment "Full IRI string of the station responsible for executing this operation." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+cfop:rec_operationType a owl:DatatypeProperty ;
+    rdfs:label "record operation type" ;
+    rdfs:comment "Type of operation to execute: transport | disassemble | reprocess | inspect | command | pick_and_place | query_status | report_step." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+cfop:rec_parameters a owl:DatatypeProperty ;
+    rdfs:label "record parameters" ;
+    rdfs:comment "JSON-encoded operation parameters (fromLocation, toLocation, processType, measurementStrategy, etc.)." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+cfop:rec_resultData a owl:DatatypeProperty ;
+    rdfs:label "record result data" ;
+    rdfs:comment "JSON-encoded result written by the executing station after completion." ;
+    rdfs:domain cfop:OperationRecord ;
+    rdfs:range xsd:string .
+
+# ---- QualityRecord — measurement and inspection results ----
+
+cfop:QualityRecord a owl:Class ;
+    rdfs:label "Quality Record" ;
+    rdfs:comment "Persists quality measurement results for a specific workpiece."@en .
+
+cfop:qr_workpieceRef a owl:DatatypeProperty ;
+    rdfs:label "QR workpiece ref" ;
+    rdfs:comment "IRI string of the inspected workpiece/component." ;
+    rdfs:domain cfop:QualityRecord ;
+    rdfs:range xsd:string .
+
+cfop:qr_qualityData a owl:DatatypeProperty ;
+    rdfs:label "QR quality data" ;
+    rdfs:comment "JSON-encoded measurement results (scores, defects, scan data, etc.)." ;
+    rdfs:domain cfop:QualityRecord ;
+    rdfs:range xsd:string .
+
+cfop:qr_strategy a owl:DatatypeProperty ;
+    rdfs:label "QR strategy" ;
+    rdfs:comment "Name/IRI of the measurement strategy that produced this record." ;
+    rdfs:domain cfop:QualityRecord ;
+    rdfs:range xsd:string .
+
+cfop:qr_qualityScore a owl:DatatypeProperty ;
+    rdfs:label "QR quality score" ;
+    rdfs:comment "Scalar quality score in [0, 1]." ;
+    rdfs:domain cfop:QualityRecord ;
+    rdfs:range xsd:double .

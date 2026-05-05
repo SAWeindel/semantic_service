@@ -1,44 +1,37 @@
-"""PlanHealer (PH/A02) — process alternative finder.
+"""PlanHealer (PH/A02) — KG-driven plan healing.
 
-Exposes:
-  receive_status_update — receive success/failure status from TC (Scenario 5).
-
-Calls (remote):
-  TC : receive_command  — send an alternative command after plan healing.
-
-Plan healing logic: if TC reports a failure for a known process, the PH
-substitutes an alternative from its internal replacement map and sends the
-new Command back to TC.
+Polls the KG for pending 'status_update' OperationRecords dispatched by TC.
+On failure, finds an alternative process and writes a new 'command'
+OperationRecord back to TC.  No direct REST calls between PH and TC.
 """
 
 import json
-import threading
 from typing import Optional
 
 from graph_db_interface.utils.iri import IRI
 from kapps_ogm import OGM
 
 from semantic_service import Service, WorkflowPayload, WorkflowResponse
+from station_base import KGPollingMixin
+import kg_writer as kgw
 
 CFOP = "https://w3id.org/circularfactory/Operations#"
+NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances#StationInstances")
 
-# Alternative process map: failed_process → replacement_process.
-# Reflects Scenario 5: unscrewing fails → milling as fallback.
-_ALTERNATIVES: dict[str, str] = {
+_ALTERNATIVES: dict[str, Optional[str]] = {
     "unscrew": "mill",
-    "mill": None,           # no further alternative
-    "disassemble": None,
+    "mill":    None,
 }
 
 
-class PlanHealer(Service):
-    """Plan Healer service (PH/A02).
+class PlanHealer(KGPollingMixin, Service):
+    """Plan Healer (PH/A02).
 
-    Monitors TC commands.  On failure, it finds an alternative process and
-    reissues a new Command to the TC — transparent to the original requester.
+    Reads status_update OperationRecords written by TC.
+    On failure, writes a new command OperationRecord back to TC.
     """
 
-    NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances")
+    NAMED_GRAPH = NAMED_GRAPH
 
     def __init__(
         self,
@@ -48,35 +41,74 @@ class PlanHealer(Service):
         host: str = "0.0.0.0",
     ) -> None:
         self.tc_id = IRI(tc_id) if tc_id else None
-        self._lock = threading.Lock()
         self.history: list = []
-
         super().__init__(service_id=ph_id, ogm=ogm, host=host)
 
         @self.mw.app.get("/history")
         def get_history() -> dict:
-            with self._lock:
-                return {"history": list(self.history)}
-
-    # ------------------------------------------------------------------
-    # Service hooks
-    # ------------------------------------------------------------------
+            return {"history": list(self.history)}
 
     def on_start(self) -> None:
-        if self.tc_id is None:
-            return
-        try:
-            self.add_remote_workflow(
-                key="tc_receive_command",
-                resource_instance=self.tc_id,
-                workflow_class=IRI(f"{CFOP}ReceiveCommandWorkflow"),
-                logger_suffix="TC-command",
-            )
-        except Exception as e:
-            self.logger.warning(f"Could not discover TC command workflow: {e}")
+        self.register_op_handler("status_update", self._handle_status_update)
+        super().on_start()
 
     # ------------------------------------------------------------------
-    # Exposed workflows
+    # KG-driven handler
+    # ------------------------------------------------------------------
+
+    def _handle_status_update(self, record: dict) -> dict:
+        product_id   = record["workpiece_ref"]
+        component_id = record["parameters"].get("componentId", "")
+        process_type = record["parameters"].get("processType", "")
+        status       = record["parameters"].get("status", "")
+
+        entry = {
+            "product_id":   product_id,
+            "component_id": component_id,
+            "process_type": process_type,
+            "status":       status,
+        }
+        self.history.append(entry)
+
+        if status == "done":
+            self.logger.info(
+                "Command '%s' on '%s' completed successfully", process_type, component_id
+            )
+            return {**entry, "action": "none"}
+
+        if status == "failed":
+            self.logger.warning(
+                "Command '%s' on '%s' failed — initiating plan healing",
+                process_type, component_id,
+            )
+            alternative = _ALTERNATIVES.get(process_type)
+            if alternative is None:
+                self.logger.error(
+                    "No alternative for failed process '%s'", process_type
+                )
+                return {**entry, "action": "no_alternative"}
+
+            self.logger.info(
+                "Plan healing: '%s' → '%s'", process_type, alternative
+            )
+            if self.tc_id:
+                kgw.create_operation_record(
+                    self.ogm, NAMED_GRAPH,
+                    station_id=self.tc_id,
+                    workpiece_ref=product_id,
+                    op_type="command",
+                    parameters={"componentId": component_id, "processType": alternative},
+                )
+                self.logger.info(
+                    "Alternative command '%s' written to KG for TC", alternative
+                )
+            return {**entry, "action": "healed", "alternative": alternative}
+
+        self.logger.info("Unexpected status '%s' — acknowledged", status)
+        return {**entry, "action": "acknowledged"}
+
+    # ------------------------------------------------------------------
+    # REST workflow — kept for push-based status delivery
     # ------------------------------------------------------------------
 
     @Service.workflow(
@@ -84,106 +116,36 @@ class PlanHealer(Service):
         key="receive_status_update",
     )
     def receive_status_update(self, payload: WorkflowPayload) -> WorkflowResponse:
-        """Handle a StatusUpdate from TC.
-
-        If status == 'failed', look up an alternative process and send a new
-        Command back to TC.  If status == 'done', log success.
-        """
+        """Push path: TC sends a StatusUpdate directly via REST."""
         response_model = self.workflows["receive_status_update"].response_model
         try:
-            product_id = str(getattr(payload, IRI(f"{CFOP}productId").lined))
+            product_id   = str(getattr(payload, IRI(f"{CFOP}productId").lined))
             component_id = str(getattr(payload, IRI(f"{CFOP}componentId").lined))
             process_type = str(getattr(payload, IRI(f"{CFOP}processType").lined))
-            status = str(getattr(payload, IRI(f"{CFOP}operationStatus").lined))
+            status       = str(getattr(payload, IRI(f"{CFOP}operationStatus").lined))
 
-            entry = {
-                "product_id": product_id,
-                "component_id": component_id,
-                "process_type": process_type,
-                "status": status,
-            }
-            with self._lock:
-                self.history.append(entry)
-
-            if status == "done":
-                self.logger.info(
-                    f"Command '{process_type}' on '{component_id}' completed successfully"
-                )
-                return response_model(
-                    status_code=200,
-                    status="success",
-                    message="Status acknowledged",
-                    content=json.dumps(entry),
-                )
-
-            if status == "failed":
-                self.logger.warning(
-                    f"Command '{process_type}' on '{component_id}' failed — initiating plan healing"
-                )
-                alternative = _ALTERNATIVES.get(process_type)
-                if alternative is None:
-                    self.logger.error(
-                        f"No alternative available for failed process '{process_type}'"
-                    )
-                    return response_model(
-                        status_code=200,
-                        status="no_alternative",
-                        message=f"No alternative process for '{process_type}'",
-                        content=json.dumps(entry),
-                    )
-
-                self.logger.info(
-                    f"Plan healing: replacing '{process_type}' with '{alternative}'"
-                )
-                self._send_alternative_command(product_id, component_id, alternative)
-                return response_model(
-                    status_code=200,
-                    status="healed",
-                    message=(
-                        f"Plan healed: '{process_type}' replaced by '{alternative}'"
-                    ),
-                    content=json.dumps({**entry, "alternative": alternative}),
-                )
-
-            # Unknown status
-            self.logger.info(f"Unexpected status '{status}' — acknowledging")
+            # Write as a status_update OperationRecord so the KG poll handles it
+            kgw.create_operation_record(
+                self.ogm, NAMED_GRAPH,
+                station_id=self.service_id,
+                workpiece_ref=product_id,
+                op_type="status_update",
+                parameters={
+                    "componentId": component_id,
+                    "processType": process_type,
+                    "status":      status,
+                },
+            )
             return response_model(
                 status_code=200,
                 status="success",
-                message=f"Status '{status}' acknowledged",
-                content=json.dumps(entry),
-            )
-
-        except Exception as e:
-            self.logger.error(f"receive_status_update error: {e}")
-            return response_model(
-                status_code=500, status="error", message=str(e), content=""
-            )
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _send_alternative_command(
-        self,
-        product_id: str,
-        component_id: str,
-        alternative: str,
-    ) -> None:
-        """Issue a new Command to the TC with the alternative process."""
-        if "tc_receive_command" not in self.remote_workflows:
-            self.logger.warning("TC command workflow not available; cannot send alternative")
-            return
-        try:
-            response = self.remote_workflows["tc_receive_command"](
-                **{
-                    IRI(f"{CFOP}productId").lined: product_id,
-                    IRI(f"{CFOP}componentId").lined: component_id,
-                    IRI(f"{CFOP}processType").lined: alternative,
-                }
-            )
-            self.logger.info(
-                f"Alternative command '{alternative}' sent to TC: {response.status}"
+                message="Status update queued for plan healing",
+                content=json.dumps({
+                    "product_id": product_id,
+                    "process_type": process_type,
+                    "status": status,
+                }),
             )
         except Exception as e:
-            self.logger.error(f"Failed to send alternative command to TC: {e}")
+            self.logger.error("receive_status_update: %s", e)
+            return response_model(status_code=500, status="error", message=str(e), content="")

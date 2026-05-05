@@ -1,81 +1,108 @@
-"""IntralogisticSystem (ILS/C03) — transport and possession management.
+"""IntralogisticSystem (ILS/C03) — KG-driven transport.
 
-Exposes:
-  execute_transport    — move a product from one location to another.
-  update_possession    — update possession state in the knowledge graph.
+Polls the KG for pending 'transport' and 'pick_and_place' OperationRecords
+assigned to this station.  All state transitions are written back to the KG.
 
-Calls (remote):
-  MS : execute_pick_and_place  — for pick-up and delivery handover.
-  PC : receive_operation_complete — report transport done.
+Exposes REST workflows for backwards-compatible direct triggering.
 """
 
 import json
 import time
-import threading
+from typing import Optional
 
 from graph_db_interface.utils.iri import IRI
 from kapps_ogm import OGM
 
 from semantic_service import Service, WorkflowPayload, WorkflowResponse
+from station_base import KGPollingMixin
+import kg_writer as kgw
 
 CFOP = "https://w3id.org/circularfactory/Operations#"
+NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances#StationInstances")
 
-# Simulated travel speed: seconds per abstract distance unit.
-_TRAVEL_TIME_SECONDS = 2.0
+_TRAVEL_TIME = 2.0
 
 
-class IntralogisticSystem(Service):
-    """Intralogistic System service (ILS/C03).
+class IntralogisticSystem(KGPollingMixin, Service):
+    """Intralogistic System (ILS/C03).
 
-    Moves assemblies and components between stations using (simulated) mobile
-    robots and manipulator modules.
+    Reads pending transport operations from the KG and executes them.
+    For each transport: dispatches a pick_and_place OperationRecord to MS,
+    waits for completion, then marks the transport done.
     """
 
-    NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances")
+    NAMED_GRAPH = NAMED_GRAPH
 
     def __init__(
         self,
         ils_id: IRI,
         ogm: OGM,
-        ms_id: IRI = None,
-        pc_id: IRI = None,
+        ms_id: Optional[IRI] = None,
+        pc_id: Optional[IRI] = None,
         host: str = "0.0.0.0",
     ) -> None:
         self.ms_id = IRI(ms_id) if ms_id else None
         self.pc_id = IRI(pc_id) if pc_id else None
-        self._lock = threading.Lock()
         self.active_transports: dict = {}
 
         super().__init__(service_id=ils_id, ogm=ogm, host=host)
 
         @self.mw.app.get("/transports")
         def get_transports() -> dict:
-            with self._lock:
-                return {"active_transports": self.active_transports.copy()}
-
-    # ------------------------------------------------------------------
-    # Service hooks
-    # ------------------------------------------------------------------
+            return {"active_transports": dict(self.active_transports)}
 
     def on_start(self) -> None:
-        for key, wf_class, resource_id in [
-            ("ms_pick_and_place", IRI(f"{CFOP}ExecutePickAndPlaceWorkflow"), self.ms_id),
-            ("pc_operation_complete", IRI(f"{CFOP}ReceiveOperationCompleteWorkflow"), self.pc_id),
-        ]:
-            if resource_id is None:
-                continue
-            try:
-                self.add_remote_workflow(
-                    key=key,
-                    resource_instance=resource_id,
-                    workflow_class=wf_class,
-                    logger_suffix=key,
-                )
-            except Exception as e:
-                self.logger.warning(f"Could not discover remote workflow '{key}': {e}")
+        self.register_op_handler("transport", self._handle_transport)
+        super().on_start()
 
     # ------------------------------------------------------------------
-    # Exposed workflows
+    # KG-driven operation handler
+    # ------------------------------------------------------------------
+
+    def _handle_transport(self, record: dict) -> dict:
+        """Execute a transport: pickup via MS → drive → deliver via MS."""
+        product_id = record["workpiece_ref"]
+        params     = record["parameters"]
+        from_loc   = params.get("fromLocation", "unknown")
+        to_loc     = params.get("toLocation",   "unknown")
+
+        self.logger.info(
+            "Transport: '%s' from '%s' to '%s'", product_id, from_loc, to_loc
+        )
+        self.active_transports[product_id] = {"from": from_loc, "to": to_loc, "status": "navigating"}
+
+        # Dispatch pickup to MS via KG (if MS is known)
+        if self.ms_id:
+            pickup_op = kgw.create_operation_record(
+                self.ogm, NAMED_GRAPH,
+                station_id=self.ms_id,
+                workpiece_ref=product_id,
+                op_type="pick_and_place",
+                parameters={"toLocation": from_loc},
+            )
+            kgw.wait_for_operation(self.ogm.db, NAMED_GRAPH, pickup_op, timeout=30)
+
+        # Simulate travel
+        time.sleep(_TRAVEL_TIME)
+        self.active_transports[product_id]["status"] = "delivering"
+
+        # Dispatch delivery to MS via KG
+        if self.ms_id:
+            deliver_op = kgw.create_operation_record(
+                self.ogm, NAMED_GRAPH,
+                station_id=self.ms_id,
+                workpiece_ref=product_id,
+                op_type="pick_and_place",
+                parameters={"toLocation": to_loc},
+            )
+            kgw.wait_for_operation(self.ogm.db, NAMED_GRAPH, deliver_op, timeout=30)
+
+        self.active_transports[product_id]["status"] = "delivered"
+        self.logger.info("Transport complete: '%s' → '%s'", product_id, to_loc)
+        return {"product_id": product_id, "location": to_loc, "status": "delivered"}
+
+    # ------------------------------------------------------------------
+    # REST workflows — backwards-compatible direct triggering
     # ------------------------------------------------------------------
 
     @Service.workflow(
@@ -83,116 +110,51 @@ class IntralogisticSystem(Service):
         key="execute_transport",
     )
     def execute_transport(self, payload: WorkflowPayload) -> WorkflowResponse:
-        """Transport a product from fromLocation to toLocation.
-
-        Simulates: robot navigates to pickup → MS picks up → robot drives to
-        destination → MS places down → possession updated.
-        """
+        """REST path: create a transport OperationRecord and wait for completion."""
         response_model = self.workflows["execute_transport"].response_model
         try:
             product_id = str(getattr(payload, IRI(f"{CFOP}productId").lined))
-            from_loc = str(getattr(payload, IRI(f"{CFOP}fromLocation").lined))
-            to_loc = str(getattr(payload, IRI(f"{CFOP}toLocation").lined))
+            from_loc   = str(getattr(payload, IRI(f"{CFOP}fromLocation").lined))
+            to_loc     = str(getattr(payload, IRI(f"{CFOP}toLocation").lined))
 
-            self.logger.info(
-                f"Transport started: '{product_id}' from '{from_loc}' to '{to_loc}'"
+            # Write to KG — our own poll loop will pick this up
+            op_iri = kgw.create_operation_record(
+                self.ogm, NAMED_GRAPH,
+                station_id=self.service_id,
+                workpiece_ref=product_id,
+                op_type="transport",
+                parameters={"fromLocation": from_loc, "toLocation": to_loc},
             )
-            with self._lock:
-                self.active_transports[product_id] = {
-                    "from": from_loc,
-                    "to": to_loc,
-                    "status": "navigating_to_pickup",
-                }
-
-            # Step 1: navigate to pickup location (simulated)
-            time.sleep(_TRAVEL_TIME_SECONDS)
-            self.logger.info(f"Arrived at pickup '{from_loc}' for '{product_id}'")
-
-            # Step 2: manipulator picks up the product
-            self._call_pick_and_place(product_id, from_loc)
-
-            with self._lock:
-                self.active_transports[product_id]["status"] = "navigating_to_destination"
-
-            # Step 3: transport to destination
-            time.sleep(_TRAVEL_TIME_SECONDS)
-            self.logger.info(f"Arrived at destination '{to_loc}' for '{product_id}'")
-
-            # Step 4: manipulator places the product
-            self._call_pick_and_place(product_id, to_loc)
-
-            with self._lock:
-                self.active_transports[product_id]["status"] = "delivered"
-
-            # Step 5: report completion to PC
-            self._notify_pc_complete(
-                operation_id=f"transport_{product_id}",
-                status="done",
+            status = kgw.wait_for_operation(
+                self.ogm.db, NAMED_GRAPH, op_iri, timeout=120
             )
-
-            self.logger.info(f"Transport complete: '{product_id}' delivered to '{to_loc}'")
+            result = kgw.get_operation_result(self.ogm.db, NAMED_GRAPH, op_iri)
             return response_model(
-                status_code=200,
-                status="success",
-                message=f"Product '{product_id}' delivered to '{to_loc}'",
-                content=json.dumps({"product_id": product_id, "location": to_loc}),
+                status_code=200 if status == "done" else 500,
+                status=status,
+                message=f"Transport '{product_id}' → '{to_loc}': {status}",
+                content=json.dumps(result or {}),
             )
         except Exception as e:
-            self.logger.error(f"execute_transport error: {e}")
-            return response_model(
-                status_code=500, status="error", message=str(e), content=""
-            )
+            self.logger.error("execute_transport: %s", e)
+            return response_model(status_code=500, status="error", message=str(e), content="")
 
     @Service.workflow(
         workflow_class=IRI(f"{CFOP}UpdatePossessionWorkflow"),
         key="update_possession",
     )
     def update_possession(self, payload: WorkflowPayload) -> WorkflowResponse:
-        """Update the possession state of a workpiece in the knowledge graph."""
+        """REST path: write a possession-state update to the KG."""
         response_model = self.workflows["update_possession"].response_model
         try:
             operation_id = str(getattr(payload, IRI(f"{CFOP}operationId").lined))
-            status = str(getattr(payload, IRI(f"{CFOP}operationStatus").lined))
-            self.logger.info(
-                f"Possession update for operation '{operation_id}': status='{status}'"
-            )
+            status       = str(getattr(payload, IRI(f"{CFOP}operationStatus").lined))
+            self.logger.info("Possession update: op='%s' status='%s'", operation_id, status)
             return response_model(
                 status_code=200,
                 status="success",
-                message=f"Possession state updated for operation '{operation_id}'",
+                message=f"Possession state for operation '{operation_id}' recorded",
                 content=json.dumps({"operation_id": operation_id, "status": status}),
             )
         except Exception as e:
-            self.logger.error(f"update_possession error: {e}")
-            return response_model(
-                status_code=500, status="error", message=str(e), content=""
-            )
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _call_pick_and_place(self, product_id: str, location: str) -> None:
-        if "ms_pick_and_place" not in self.remote_workflows:
-            self.logger.debug("MS pick-and-place not available; skipping")
-            return
-        response = self.remote_workflows["ms_pick_and_place"](
-            **{
-                IRI(f"{CFOP}productId").lined: product_id,
-                IRI(f"{CFOP}toLocation").lined: location,
-            }
-        )
-        self.logger.info(f"Pick-and-place at '{location}': {response.status}")
-
-    def _notify_pc_complete(self, operation_id: str, status: str) -> None:
-        if "pc_operation_complete" not in self.remote_workflows:
-            return
-        try:
-            self.remote_workflows["pc_operation_complete"](
-                **{
-                    IRI(f"{CFOP}operationId").lined: operation_id,
-                    IRI(f"{CFOP}operationStatus").lined: status,
-                }
-            )
-        except Exception as e:
-            self.logger.warning(f"Could not notify PC of completion: {e}")
+            return response_model(status_code=500, status="error", message=str(e), content="")

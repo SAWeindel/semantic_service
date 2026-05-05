@@ -1,10 +1,6 @@
-"""ManipulationSystem (MS/C06) — pick-and-place operations.
+"""ManipulationSystem (MS/C06) — KG-driven pick-and-place.
 
-Exposes:
-  execute_pick_and_place — pick up a product and place it at the target location.
-
-The MS may be a standalone module used by the ILS or integrated into a station
-(e.g. a TC with its own robotic arm).  Either way it exposes the same workflow.
+Polls the KG for pending 'pick_and_place' OperationRecords.
 """
 
 import json
@@ -14,37 +10,52 @@ from graph_db_interface.utils.iri import IRI
 from kapps_ogm import OGM
 
 from semantic_service import Service, WorkflowPayload, WorkflowResponse
+from station_base import KGPollingMixin
+import kg_writer as kgw
 
 CFOP = "https://w3id.org/circularfactory/Operations#"
+NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances#StationInstances")
 
-# Simulated pick-and-place duration in seconds.
-_OPERATION_TIME_SECONDS = 1.0
+_OP_TIME = 1.0
 
 
-class ManipulationSystem(Service):
-    """Manipulation System service (MS/C06).
+class ManipulationSystem(KGPollingMixin, Service):
+    """Manipulation System (MS/C06).
 
-    Executes all manipulation (pick-and-place) operations, either as part of
-    the ILS mobile robot or as a fixed robotic arm inside a station.
+    Executes pick-and-place operations.  Discovered via the KG poll loop
+    (dispatched by ILS or TC) and also accessible via REST.
     """
 
-    NAMED_GRAPH = IRI("https://w3id.org/circularfactory/OperationsInstances")
+    NAMED_GRAPH = NAMED_GRAPH
 
-    def __init__(
-        self,
-        ms_id: IRI,
-        ogm: OGM,
-        host: str = "0.0.0.0",
-    ) -> None:
-        self.operations_count: int = 0
+    def __init__(self, ms_id: IRI, ogm: OGM, host: str = "0.0.0.0") -> None:
+        self.operations_count = 0
         super().__init__(service_id=ms_id, ogm=ogm, host=host)
 
         @self.mw.app.get("/stats")
         def get_stats() -> dict:
             return {"operations_count": self.operations_count}
 
+    def on_start(self) -> None:
+        self.register_op_handler("pick_and_place", self._handle_pick_and_place)
+        super().on_start()
+
     # ------------------------------------------------------------------
-    # Exposed workflows
+    # KG-driven handler
+    # ------------------------------------------------------------------
+
+    def _handle_pick_and_place(self, record: dict) -> dict:
+        product_id  = record["workpiece_ref"]
+        to_location = record["parameters"].get("toLocation", "unknown")
+
+        self.logger.info("Pick-and-place: '%s' → '%s'", product_id, to_location)
+        time.sleep(_OP_TIME)
+        self.operations_count += 1
+        self.logger.info("Pick-and-place complete: '%s' at '%s'", product_id, to_location)
+        return {"product_id": product_id, "location": to_location}
+
+    # ------------------------------------------------------------------
+    # REST workflow — backwards-compatible direct triggering
     # ------------------------------------------------------------------
 
     @Service.workflow(
@@ -52,36 +63,26 @@ class ManipulationSystem(Service):
         key="execute_pick_and_place",
     )
     def execute_pick_and_place(self, payload: WorkflowPayload) -> WorkflowResponse:
-        """Pick up a product and place it at the specified target location.
-
-        Simulates gripper movement: approach → grasp → transport → release.
-        """
+        """REST path: write a pick_and_place OperationRecord and wait."""
         response_model = self.workflows["execute_pick_and_place"].response_model
         try:
-            product_id = str(getattr(payload, IRI(f"{CFOP}productId").lined))
+            product_id  = str(getattr(payload, IRI(f"{CFOP}productId").lined))
             to_location = str(getattr(payload, IRI(f"{CFOP}toLocation").lined))
 
-            self.logger.info(
-                f"Pick-and-place: moving '{product_id}' to '{to_location}'"
+            op_iri = kgw.create_operation_record(
+                self.ogm, NAMED_GRAPH,
+                station_id=self.service_id,
+                workpiece_ref=product_id,
+                op_type="pick_and_place",
+                parameters={"toLocation": to_location},
             )
-
-            # Simulate gripper operation
-            time.sleep(_OPERATION_TIME_SECONDS)
-            self.operations_count += 1
-
-            self.logger.info(
-                f"Pick-and-place complete: '{product_id}' placed at '{to_location}'"
-            )
+            status = kgw.wait_for_operation(self.ogm.db, NAMED_GRAPH, op_iri, timeout=30)
+            result = kgw.get_operation_result(self.ogm.db, NAMED_GRAPH, op_iri)
             return response_model(
-                status_code=200,
-                status="success",
-                message=f"Product '{product_id}' placed at '{to_location}'",
-                content=json.dumps(
-                    {"product_id": product_id, "location": to_location}
-                ),
+                status_code=200 if status == "done" else 500,
+                status=status,
+                message=f"Pick-and-place '{product_id}' → '{to_location}': {status}",
+                content=json.dumps(result or {}),
             )
         except Exception as e:
-            self.logger.error(f"execute_pick_and_place error: {e}")
-            return response_model(
-                status_code=500, status="error", message=str(e), content=""
-            )
+            return response_model(status_code=500, status="error", message=str(e), content="")

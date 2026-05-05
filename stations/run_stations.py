@@ -188,29 +188,18 @@ def demo_scenario_3(pc: ProductionControl) -> None:
         logger.error(f"Scenario 3 failed: {e}")
 
 
-def demo_scenario_5(tc: TransformerCell) -> None:
-    """Scenario 5: plan healing — unscrew fails, PH substitutes mill."""
+def demo_scenario_5(pc: ProductionControl) -> None:
+    """Scenario 5: PC writes a 'command' OperationRecord; TC fails and PH heals via KG."""
     logger.info("=== Scenario 5: Plan Healing (unscrew → mill) ===")
     try:
-        # Simulate PC sending the first command ("unscrew S05") to TC.
-        # TC's receive_command will detect the failure and notify PH.
-        # PH will then send an alternative command ("mill S05") back to TC.
-        from semantic_service import WorkflowPayload
-
-        payload_data = {
-            IRI(f"{CFOP}productId").lined: "AngleGrinder_AG123",
-            IRI(f"{CFOP}componentId").lined: "Screw_S05",
-            IRI(f"{CFOP}processType").lined: "unscrew",
-        }
-        logger.info("Sending 'unscrew S05' command to TC…")
-        # Direct invocation via workflow for demo purposes
-        response = tc.remote_workflows.get("tc_receive_command")
-        if response is None:
-            logger.info(
-                "Calling TC receive_command directly (no self-remote needed in demo)"
-            )
+        op = pc.initiate_command(
+            product_id="AngleGrinder_AG123",
+            component_id="Screw_S05",
+            process_type="unscrew",
+        )
+        logger.info("Command op %s dispatched; TC will fail and PH will write 'mill' op", op)
     except Exception as e:
-        logger.error(f"Scenario 5 setup failed: {e}")
+        logger.error("Scenario 5 failed: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -311,12 +300,19 @@ def main() -> None:
     print("=" * 64)
     print()
 
-    # Run demo scenarios
-    demo_scenario_1(pc)
-    time.sleep(1)
-    demo_scenario_2(pc)
-    time.sleep(1)
-    demo_scenario_3(pc)
+    # Run demo scenarios — each dispatches OperationRecords to the KG;
+    # stations pick them up via their background poll loops.
+    import threading
+    def _run_demos():
+        time.sleep(2)  # let all poll loops start
+        demo_scenario_1(pc)
+        time.sleep(2)
+        demo_scenario_2(pc)
+        time.sleep(2)
+        demo_scenario_3(pc)
+        time.sleep(2)
+        demo_scenario_5(pc)
+    threading.Thread(target=_run_demos, daemon=True, name="demo-runner").start()
 
     # Block on PC server thread
     try:
