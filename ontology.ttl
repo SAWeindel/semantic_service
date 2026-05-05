@@ -1,0 +1,509 @@
+@prefix cfc: <https://w3id.org/circularfactory/Core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix mod: <https://w3id.org/mod#> .
+@prefix orcid: <https://orcid.org/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+dcterms:created a owl:AnnotationProperty .
+
+dcterms:creator a owl:AnnotationProperty .
+
+dcterms:license a owl:AnnotationProperty .
+
+dcterms:title a owl:AnnotationProperty .
+
+vann:preferredNamespacePrefix a owl:AnnotationProperty .
+
+vann:preferredNamespaceUri a owl:AnnotationProperty .
+
+rdfs:comment a owl:AnnotationProperty ;
+    rdfs:label "comment" .
+
+rdfs:label a owl:AnnotationProperty ;
+    rdfs:label "label" .
+
+owl:versionIRI a owl:AnnotationProperty .
+
+owl:versionInfo a owl:AnnotationProperty .
+
+foaf:name a owl:DatatypeProperty ;
+    rdfs:label "name" .
+
+<https://w3id.org/circularfactory/Core> a owl:Ontology ;
+    rdfs:label "Circular Factory Core Ontology"@en ;
+    dcterms:created "2025-08-11"^^xsd:date ;
+    dcterms:creator orcid:0000-0002-3704-9567,
+        orcid:0009-0008-1170-4122 ;
+    dcterms:license <https://creativecommons.org/licenses/by/4.0/> ;
+    dcterms:title "The Circular Factory Core Ontology"@en ;
+    vann:preferredNamespacePrefix "cfc" ;
+    vann:preferredNamespaceUri cfc: ;
+    rdfs:comment "The core ontology defines central concepts and relations of a circular factory."@en ;
+    owl:versionIRI <https://w3id.org/circularfactory/Core/0.9.0> ;
+    owl:versionInfo "0.9.0" ;
+    mod:createdWith <https://chowlk.linkeddata.es/> .
+
+cfc:fulfillsOrder a owl:ObjectProperty ;
+    rdfs:label "fulfills order" ;
+    rdfs:domain cfc:Product ;
+    rdfs:range cfc:Order .
+
+cfc:hasCapability a owl:ObjectProperty ;
+    rdfs:label "has capability" ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range cfc:Capability .
+
+cfc:hasInputEntityType a owl:ObjectProperty ;
+    rdfs:label "has input entity type" ;
+    rdfs:domain cfc:TaskType ;
+    rdfs:range cfc:EntityType .
+
+cfc:hasInputWorkpiece a owl:ObjectProperty ;
+    rdfs:label "has input workpiece" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range cfc:Workpiece .
+
+cfc:hasOutputEntityType a owl:ObjectProperty ;
+    rdfs:label "has output entity type" ;
+    rdfs:domain cfc:TaskType ;
+    rdfs:range cfc:EntityType .
+
+cfc:hasOutputWorkpiece a owl:ObjectProperty ;
+    rdfs:label "has output workpiece" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range cfc:Workpiece .
+
+cfc:hasPreviousProductGeneration a owl:FunctionalProperty,
+        owl:ObjectProperty ;
+    rdfs:label "has previous product generation" ;
+    rdfs:domain cfc:ProductGeneration ;
+    rdfs:range cfc:ProductGeneration .
+
+cfc:hasQualityState a owl:ObjectProperty ;
+    rdfs:label "has quality state" ;
+    rdfs:domain cfc:Workpiece ;
+    rdfs:range cfc:QualityState .
+
+cfc:hasReferenceTask a owl:ObjectProperty ;
+    rdfs:label "has reference task" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range cfc:Task .
+
+cfc:hasTaskType a owl:ObjectProperty ;
+    rdfs:label "has task type" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range cfc:TaskType .
+
+cfc:isContainedIn a owl:ObjectProperty ;
+    rdfs:label "is contained in" ;
+    owl:inverseOf cfc:containsWorkpiece .
+
+cfc:isSubTaskOf a owl:ObjectProperty ;
+    rdfs:label "is sub task of" ;
+    owl:inverseOf cfc:hasSubTask .
+
+orcid:0000-0002-3704-9567 a owl:NamedIndividual,
+        foaf:Person ;
+    rdfs:label "Jan-Felix Klein" ;
+    foaf:name "Jan-Felix Klein" .
+
+orcid:0009-0008-1170-4122 a owl:NamedIndividual,
+        foaf:Person ;
+    rdfs:label "Finn Bail" ;
+    foaf:name "Finn Bail" .
+
+cfc:AtomicTask a owl:Class ;
+    rdfs:label "Atomic Task" ;
+    rdfs:comment "A task that is indivisible and cannot be further decomposed into subtasks within the given modeling scope."@en ;
+    rdfs:subClassOf cfc:Task ;
+    owl:disjointWith cfc:CompositeTask .
+
+cfc:ChangeabilityCapability a owl:Class ;
+    rdfs:label "Changeability Capability" ;
+    rdfs:comment "A capability that can be equipped with high effort in time or cost."@en ;
+    rdfs:subClassOf cfc:Capability .
+
+cfc:ConvergingProcess a owl:Class ;
+    rdfs:label "Converging Process" ;
+    rdfs:comment "A production process where the amount of input-workpieces is larger that the amount of output-workpieces  "@en ;
+    rdfs:subClassOf cfc:ProductionProcess .
+
+cfc:DivergingProcess a owl:Class ;
+    rdfs:label "Diverging Process" ;
+    rdfs:comment "A production process where the amount of input-workpieces is smaller than amount of output-workpieces  "@en ;
+    rdfs:subClassOf cfc:ProductionProcess .
+
+cfc:EquippedCapability a owl:Class ;
+    rdfs:label "Equipped Capability" ;
+    rdfs:comment "A capability that is currently available and which is realized through the physical or technical configuration of a resource."@en ;
+    rdfs:subClassOf cfc:Capability .
+
+cfc:FinishedProduct a owl:Class ;
+    rdfs:label "Finished Product" ;
+    rdfs:comment "TBD."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:Workpiece ;
+            owl:onProperty cfc:hasFinalWorkpiece ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        cfc:Product .
+
+cfc:FlexibilityCapability a owl:Class ;
+    rdfs:label "Flexibility Capability" ;
+    rdfs:comment "A capability that can be equipped with little effort in time or cost."@en ;
+    rdfs:subClassOf cfc:Capability .
+
+cfc:SupportingProcess a owl:Class ;
+    rdfs:label "Supporting Process" ;
+    rdfs:comment "A process which does not directly involve a workpiece."@en ;
+    rdfs:subClassOf cfc:Process ;
+    owl:disjointWith cfc:ProductionProcess .
+
+cfc:UnitPreservingProcess a owl:Class ;
+    rdfs:label "Unit Preserving Process" ;
+    rdfs:comment "A production process where the amount of input-workpieces equals the amount of output-workpieces"@en ;
+    rdfs:subClassOf cfc:ProductionProcess .
+
+cfc:amount a owl:DatatypeProperty ;
+    rdfs:label "amount" ;
+    rdfs:domain cfc:OrderItem ;
+    rdfs:range xsd:nonNegativeInteger .
+
+cfc:enablesProcess a owl:ObjectProperty ;
+    rdfs:label "enables process" ;
+    rdfs:domain cfc:Capability ;
+    rdfs:range cfc:Process .
+
+cfc:executedOn a owl:ObjectProperty ;
+    rdfs:label "executed on" ;
+    rdfs:domain cfc:Operation ;
+    rdfs:range cfc:Resource .
+
+cfc:hasAssemblyType a owl:ObjectProperty ;
+    rdfs:label "has assembly type" ;
+    rdfs:domain cfc:Assembly ;
+    rdfs:range cfc:AssemblyType .
+
+cfc:hasComponentType a owl:ObjectProperty ;
+    rdfs:label "has component type" ;
+    rdfs:domain cfc:Component ;
+    rdfs:range cfc:ComponentType .
+
+cfc:hasEvaluationTime a owl:ObjectProperty ;
+    rdfs:label "has evaluation time" ;
+    rdfs:domain cfc:QualityState ;
+    rdfs:range time:Instant .
+
+cfc:hasExecutionInterval a owl:ObjectProperty ;
+    rdfs:label "has execution interval" ;
+    rdfs:domain cfc:Operation ;
+    rdfs:range time:Interval .
+
+cfc:hasFinalWorkpiece a owl:ObjectProperty ;
+    rdfs:label "has final workpiece" ;
+    rdfs:domain cfc:FinishedProduct ;
+    rdfs:range cfc:Workpiece .
+
+cfc:hasLocation a owl:ObjectProperty ;
+    rdfs:label "has location" ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range cfc:Location .
+
+cfc:hasObservationTime a owl:ObjectProperty ;
+    rdfs:label "has observation time" ;
+    rdfs:domain cfc:Location ;
+    rdfs:range time:Instant .
+
+cfc:hasOrderItem a owl:ObjectProperty ;
+    rdfs:label "has order item" ;
+    rdfs:domain cfc:Order ;
+    rdfs:range cfc:OrderItem .
+
+cfc:hasOrderItemProductType a owl:ObjectProperty ;
+    rdfs:label "has order item product type" ;
+    rdfs:domain cfc:OrderItem ;
+    rdfs:range cfc:ProductType .
+
+cfc:hasOrigin a owl:ObjectProperty ;
+    rdfs:label "has origin" ;
+    rdfs:domain cfc:Assembly,
+        cfc:Component ;
+    rdfs:range [ a owl:Class ;
+            owl:unionOf ( cfc:VirginMaterial cfc:Core ) ],
+        cfc:Core .
+
+cfc:hasPlannedInterval a owl:ObjectProperty ;
+    rdfs:label "has planned interval" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range time:Interval .
+
+cfc:hasPossessedWorkpiece a owl:ObjectProperty ;
+    rdfs:label "has possessed workpiece" ;
+    rdfs:domain cfc:Workpiece ;
+    rdfs:range cfc:PossessionState .
+
+cfc:hasPossessionInterval a owl:ObjectProperty ;
+    rdfs:label "has possession interval" ;
+    rdfs:domain time:Interval ;
+    rdfs:range cfc:PossessionState .
+
+cfc:hasPossessor a owl:ObjectProperty ;
+    rdfs:label "has possessor" ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range cfc:PossessionState .
+
+cfc:hasProductGeneration a owl:ObjectProperty ;
+    rdfs:label "has product generation" ;
+    rdfs:domain cfc:ProductType ;
+    rdfs:range cfc:ProductGeneration .
+
+cfc:hasProductType a owl:ObjectProperty ;
+    rdfs:label "has product type" ;
+    rdfs:domain cfc:Product ;
+    rdfs:range cfc:ProductType .
+
+cfc:implementsCapability a owl:ObjectProperty ;
+    rdfs:label "implements capability" ;
+    rdfs:domain cfc:Operation ;
+    rdfs:range cfc:Capability .
+
+cfc:implementsProcess a owl:ObjectProperty ;
+    rdfs:label "implements process" ;
+    rdfs:domain cfc:Task ;
+    rdfs:range cfc:Process .
+
+cfc:isActive a owl:DatatypeProperty ;
+    rdfs:label "is active" ;
+    rdfs:domain cfc:Workpiece ;
+    rdfs:range xsd:boolean .
+
+foaf:Person a owl:Class ;
+    rdfs:label "Person" .
+
+cfc:CompositeTask a owl:Class ;
+    rdfs:label "Composite Task" ;
+    rdfs:comment "A task that can be decomposed into multiple subtasks."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty cfc:hasSubTask ;
+            owl:someValuesFrom cfc:Task ],
+        cfc:Task ;
+    owl:disjointWith cfc:AtomicTask .
+
+cfc:Order a owl:Class ;
+    rdfs:label "Order" ;
+    rdfs:comment "A specification of requested production activities, defining what products or items should be produced and under which conditions."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty cfc:hasOrderItem ;
+            owl:someValuesFrom cfc:OrderItem ] .
+
+cfc:QualityState a owl:Class ;
+    rdfs:label "Quality State" ;
+    rdfs:comment "The quality state a workpiece, evaluated at a given time"@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass time:Instant ;
+            owl:onProperty cfc:hasEvaluationTime ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:VirginMaterial a owl:Class ;
+    rdfs:label "Virgin Material" .
+
+cfc:containsWorkpiece a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "contains workpiece" ;
+    rdfs:domain cfc:Assembly ;
+    rdfs:range cfc:Workpiece .
+
+cfc:hasSubTask a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "has sub task" ;
+    rdfs:domain cfc:CompositeTask ;
+    rdfs:range cfc:Task .
+
+cfc:AssemblyType a owl:Class ;
+    rdfs:label "Assembly Type" ;
+    rdfs:comment "A classification that defines the structure and composition of an assembly independent of individual instances"@en ;
+    rdfs:subClassOf cfc:EntityType ;
+    owl:disjointWith cfc:ComponentType .
+
+cfc:Component a owl:Class ;
+    rdfs:label "Component" ;
+    rdfs:comment "A workpiece that is indivisible and cannot be further decomposed into components within the given modeling scope."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:ComponentType ;
+            owl:onProperty cfc:hasComponentType ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onClass [ a owl:Class ;
+                    owl:unionOf ( cfc:VirginMaterial cfc:Core ) ] ;
+            owl:onProperty cfc:hasOrigin ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        cfc:Workpiece ;
+    owl:disjointWith cfc:Assembly .
+
+cfc:ComponentType a owl:Class ;
+    rdfs:label "Component Type" ;
+    rdfs:comment "A classification that defines the design or specification of a component independent of individual instances"@en ;
+    rdfs:subClassOf cfc:EntityType ;
+    owl:disjointWith cfc:AssemblyType .
+
+cfc:Core a owl:Class ;
+    rdfs:label "Core" ;
+    rdfs:subClassOf cfc:Product .
+
+cfc:Location a owl:Class ;
+    rdfs:label "Location" ;
+    rdfs:comment "A spatial region or place where resources or production items are situated."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass time:Instant ;
+            owl:onProperty cfc:hasObservationTime ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:Operation a owl:Class ;
+    rdfs:label "Operation" ;
+    rdfs:comment "An executable form of a task which has been assigned to a concrete resource."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty cfc:executedOn ;
+            owl:someValuesFrom cfc:Resource ],
+        [ a owl:Restriction ;
+            owl:onClass cfc:Capability ;
+            owl:onProperty cfc:implementsCapability ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onClass time:Interval ;
+            owl:onProperty cfc:hasExecutionInterval ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        cfc:Task .
+
+cfc:TaskType a owl:Class ;
+    rdfs:label "Task Type" ;
+    rdfs:comment "A task type acts as a blueprint for tasks."@en .
+
+time:Instant a owl:Class ;
+    rdfs:label "Instant" .
+
+cfc:Assembly a owl:Class ;
+    rdfs:label "Assembly" ;
+    rdfs:comment "A workpiece composed of other workpieces that are structurally combined into a single unit."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:AssemblyType ;
+            owl:onProperty cfc:hasAssemblyType ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onProperty cfc:containsWorkpiece ;
+            owl:someValuesFrom cfc:Workpiece ],
+        cfc:Workpiece ;
+    owl:disjointWith cfc:Component .
+
+cfc:EntityType a owl:Class ;
+    rdfs:label "Entity Type" ;
+    rdfs:comment "TBD"@en .
+
+cfc:OrderItem a owl:Class ;
+    rdfs:label "Order Item" ;
+    rdfs:comment "An individual item within an order that specifies a particular product variant, quantity, or requirements."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:ProductType ;
+            owl:onProperty cfc:hasOrderItemProductType ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onDataRange xsd:nonNegativeInteger ;
+            owl:onProperty cfc:amount ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:Product a owl:Class ;
+    rdfs:label "Product" ;
+    rdfs:comment "TBD."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:ProductType ;
+            owl:onProperty cfc:hasProductType ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:ProductGeneration a owl:Class ;
+    rdfs:label "Product Generation" ;
+    rdfs:comment "TBD"@en .
+
+cfc:ProductionProcess a owl:Class ;
+    rdfs:label "Production Process" ;
+    rdfs:comment "A process that involves a workpiece"@en ;
+    rdfs:subClassOf cfc:Process ;
+    owl:disjointWith cfc:SupportingProcess .
+
+time:Interval a owl:Class ;
+    rdfs:label "Interval" ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:PossessionState ;
+            owl:onProperty cfc:hasPossessionInterval ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:ProductType a owl:Class ;
+    rdfs:label "Product Type" ;
+    rdfs:comment "TBD."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:ProductGeneration ;
+            owl:onProperty cfc:hasProductGeneration ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:PossessionState a owl:Class ;
+    rdfs:label "Possession State" ;
+    rdfs:comment "A contextual, time-bound relationship between a resource and a workpiece, often mediated by an operation."@en .
+
+cfc:Process a owl:Class ;
+    rdfs:label "Process" ;
+    rdfs:comment "A process is an action that changes either the product or the production system state."@en .
+
+cfc:Resource a owl:Class ;
+    rdfs:label "Resource" ;
+    rdfs:comment "An entity such as a machine, tool, human, or system that can perform or support processes."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty cfc:hasLocation ;
+            owl:someValuesFrom cfc:Location ],
+        [ a owl:Restriction ;
+            owl:onClass cfc:PossessionState ;
+            owl:onProperty cfc:hasPossessor ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] ;
+    owl:disjointWith cfc:Workpiece .
+
+cfc:Capability a owl:Class ;
+    rdfs:label "Capability" ;
+    rdfs:comment "An ability or capacity of a resource that enables it to perform certain processes."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:Process ;
+            owl:onProperty cfc:enablesProcess ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:Task a owl:Class ;
+    rdfs:label "Task" ;
+    rdfs:comment "An abstract unit of work that implements a specific process."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass time:Interval ;
+            owl:onProperty cfc:hasPlannedInterval ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onClass cfc:Process ;
+            owl:onProperty cfc:implementsProcess ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] .
+
+cfc:Workpiece a owl:Class ;
+    rdfs:label "Workpiece" ;
+    rdfs:comment "A production item that are or were being processed or stored."@en ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass cfc:PossessionState ;
+            owl:onProperty cfc:hasPossessedWorkpiece ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onDataRange xsd:boolean ;
+            owl:onProperty cfc:isActive ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ] ;
+    owl:disjointWith cfc:Resource .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( cfc:ConvergingProcess cfc:DivergingProcess cfc:UnitPreservingProcess ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( cfc:FlexibilityCapability cfc:EquippedCapability cfc:ChangeabilityCapability ) .
+

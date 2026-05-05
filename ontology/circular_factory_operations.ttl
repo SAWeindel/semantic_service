@@ -1,0 +1,528 @@
+@prefix cfc: <https://w3id.org/circularfactory/Core#> .
+@prefix cfop: <https://w3id.org/circularfactory/Operations#> .
+@prefix wf: <http://w3id.org/circularfactory/Workflow#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+
+#################################################################
+# Ontology Declaration
+#################################################################
+
+<https://w3id.org/circularfactory/Operations> a owl:Ontology ;
+    rdfs:label "Circular Factory Operations Ontology"@en ;
+    dcterms:title "The Circular Factory Operations Ontology"@en ;
+    dcterms:created "2026-05-05"^^xsd:date ;
+    dcterms:license <https://creativecommons.org/licenses/by/4.0/> ;
+    rdfs:comment "Extends the Circular Factory Core Ontology with station-level operation workflows for use with the semantic middleware (OGM). Covers the actor interactions defined in Scenarios 1–5 of the Circular Factory Hackathon showcase."@en ;
+    owl:imports <https://w3id.org/circularfactory/Core> ;
+    owl:imports <http://w3id.org/circularfactory/Workflow> ;
+    vann:preferredNamespacePrefix "cfop" ;
+    vann:preferredNamespaceUri cfop: ;
+    owl:versionIRI <https://w3id.org/circularfactory/Operations/0.1.0> ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+# Station Resource Classes
+# Each station is a subclass of cfc:Resource.
+#################################################################
+
+cfop:ProductionControl a owl:Class ;
+    rdfs:label "Production Control" ;
+    rdfs:comment "The central orchestrator responsible for initiating and monitoring production and transport operations (PC/A01)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:IntralogisticSystem a owl:Class ;
+    rdfs:label "Intralogistic System" ;
+    rdfs:comment "Responsible for transporting goods between stations using mobile robots, manipulator modules, and transport modules (ILS/C03)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:ManipulationSystem a owl:Class ;
+    rdfs:label "Manipulation System" ;
+    rdfs:comment "Responsible for pick-and-place operations; may be a standalone module or integrated into a station (MS/C06)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:InspectionSystem a owl:Class ;
+    rdfs:label "Inspection System" ;
+    rdfs:comment "Responsible for all measurement tasks; can suggest and execute measurement strategies (IS/B01)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:TransformerCell a owl:Class ;
+    rdfs:label "Transformer Cell" ;
+    rdfs:comment "Executes processes on workpieces such as unscrewing, milling, disassembly, and reprocessing. Has an automatic door for ILS access (TC/C01)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:PlanHealer a owl:Class ;
+    rdfs:label "Plan Healer" ;
+    rdfs:comment "Finds process alternatives when a Transformer Cell operation fails. Each PH is attached to exactly one TC (PH/A02)."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+cfop:SpecialMachine a owl:Class ;
+    rdfs:label "Special Machine" ;
+    rdfs:comment "A specialised machine within or attached to a Transformer Cell, capable of additive or subtractive reprocessing steps."@en ;
+    rdfs:subClassOf cfc:Resource .
+
+#################################################################
+# Station-level datatype properties
+#################################################################
+
+cfop:productId a owl:DatatypeProperty ;
+    rdfs:label "product ID" ;
+    rdfs:comment "IRI or local identifier of a workpiece or product instance in the knowledge graph." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:componentId a owl:DatatypeProperty ;
+    rdfs:label "component ID" ;
+    rdfs:comment "IRI or local identifier of a component instance." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:fromLocation a owl:DatatypeProperty ;
+    rdfs:label "from location" ;
+    rdfs:comment "Starting location identifier for a transport or pick-and-place operation." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:toLocation a owl:DatatypeProperty ;
+    rdfs:label "to location" ;
+    rdfs:comment "Target location identifier for a transport or pick-and-place operation." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:operationId a owl:DatatypeProperty ;
+    rdfs:label "operation ID" ;
+    rdfs:comment "IRI or local identifier of an operation (cfc:Operation) in the knowledge graph." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:operationStatus a owl:DatatypeProperty ;
+    rdfs:label "operation status" ;
+    rdfs:comment "Current status of an operation: pending | running | done | failed." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:processType a owl:DatatypeProperty ;
+    rdfs:label "process type" ;
+    rdfs:comment "Type of process to execute, e.g. 'disassemble', 'mill', 'unscrew', 'reprocess'." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:measurementStrategy a owl:DatatypeProperty ;
+    rdfs:label "measurement strategy" ;
+    rdfs:comment "Identifier or name of a measurement strategy (e.g. CT scan, surface scan)." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:qualityData a owl:DatatypeProperty ;
+    rdfs:label "quality data" ;
+    rdfs:comment "JSON-encoded quality measurement results, e.g. CT scan outcome, dimensional data." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:alternativeProcess a owl:DatatypeProperty ;
+    rdfs:label "alternative process" ;
+    rdfs:comment "Alternative process type proposed by the Plan Healer when the original process fails." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:doorAction a owl:DatatypeProperty ;
+    rdfs:label "door action" ;
+    rdfs:comment "Action to perform on the Transformer Cell door: 'open' or 'close'." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:machineId a owl:DatatypeProperty ;
+    rdfs:label "machine ID" ;
+    rdfs:comment "IRI or local identifier of a SpecialMachine instance." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+cfop:strategies a owl:DatatypeProperty ;
+    rdfs:label "strategies" ;
+    rdfs:comment "JSON-encoded list of measurement strategy names/IRIs returned by the Inspection System." ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string .
+
+#################################################################
+# Payload Classes
+# Each payload class carries the input data for one workflow type.
+#################################################################
+
+# --- Transport (ILS) ---
+cfop:TransportPayload a owl:Class ;
+    rdfs:label "Transport Payload" ;
+    rdfs:comment "Input data for an ExecuteTransportWorkflow: the product to move and its origin/destination." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:fromLocation ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:toLocation ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Pick and Place (MS) ---
+cfop:PickAndPlacePayload a owl:Class ;
+    rdfs:label "Pick and Place Payload" ;
+    rdfs:comment "Input data for an ExecutePickAndPlaceWorkflow: the product to manipulate and target location." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:toLocation ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Disassembly (TC) ---
+cfop:DisassemblyPayload a owl:Class ;
+    rdfs:label "Disassembly Payload" ;
+    rdfs:comment "Input data for an ExecuteDisassemblyWorkflow: the assembly to disassemble." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Reprocessing (TC / SpecialMachine) ---
+cfop:ReprocessPayload a owl:Class ;
+    rdfs:label "Reprocess Payload" ;
+    rdfs:comment "Input data for an ExecuteReprocessingWorkflow: the component and the desired process type." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:processType ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Measurement strategy suggestion (IS) ---
+cfop:MeasurementStrategyPayload a owl:Class ;
+    rdfs:label "Measurement Strategy Payload" ;
+    rdfs:comment "Input data for a SuggestMeasurementStrategyWorkflow: the product that needs inspection." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Perform inspection (IS) ---
+cfop:InspectionPayload a owl:Class ;
+    rdfs:label "Inspection Payload" ;
+    rdfs:comment "Input data for a PerformInspectionWorkflow: the product and the chosen measurement strategy." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:measurementStrategy ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Quality update (PC, IS) ---
+cfop:QualityUpdatePayload a owl:Class ;
+    rdfs:label "Quality Update Payload" ;
+    rdfs:comment "Input data carrying component quality results to be stored in the knowledge graph." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:qualityData ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Operation status update (TC → PC) ---
+cfop:OperationStatusPayload a owl:Class ;
+    rdfs:label "Operation Status Payload" ;
+    rdfs:comment "Input data reporting the current status of an operation back to PC." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:operationId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:operationStatus ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- TC → PH status update (Scenario 5) ---
+cfop:StatusUpdatePayload a owl:Class ;
+    rdfs:label "Status Update Payload" ;
+    rdfs:comment "Data sent from the Transformer Cell to the Plan Healer after a command executes (success or failure)." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:componentId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:processType ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:operationStatus ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- PH → TC command (Scenario 5) ---
+cfop:CommandPayload a owl:Class ;
+    rdfs:label "Command Payload" ;
+    rdfs:comment "Command issued to the Transformer Cell by PC (initial) or the Plan Healer (alternative): product, component, and process to execute." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:productId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:componentId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:processType ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Door control (TC) ---
+cfop:DoorControlPayload a owl:Class ;
+    rdfs:label "Door Control Payload" ;
+    rdfs:comment "Input data for an OpenDoorWorkflow or CloseDoorWorkflow." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:doorAction ;
+        owl:hasValue xsd:string
+    ] .
+
+# --- Machine status query (TC ↔ SpecialMachine) ---
+cfop:MachineStatusPayload a owl:Class ;
+    rdfs:label "Machine Status Payload" ;
+    rdfs:comment "Input data for querying or updating a SpecialMachine's status." ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:machineId ;
+        owl:hasValue xsd:string
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty cfop:operationStatus ;
+        owl:hasValue xsd:string
+    ] .
+
+#################################################################
+# Workflow Classes
+# Pattern: subClassOf wf:Workflow + wf:accepts restriction.
+# Each workflow class is advertised by the exposing station.
+#################################################################
+
+# ---- IntralogisticSystem workflows ----
+
+cfop:ExecuteTransportWorkflow a owl:Class ;
+    rdfs:label "Execute Transport Workflow" ;
+    rdfs:comment "Transport a product from one location to another. Called by PC on the ILS."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:TransportPayload
+    ] .
+
+cfop:UpdatePossessionWorkflow a owl:Class ;
+    rdfs:label "Update Possession Workflow" ;
+    rdfs:comment "Update the possession state of a workpiece in the knowledge graph after handover."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:OperationStatusPayload
+    ] .
+
+# ---- ManipulationSystem workflows ----
+
+cfop:ExecutePickAndPlaceWorkflow a owl:Class ;
+    rdfs:label "Execute Pick and Place Workflow" ;
+    rdfs:comment "Pick up a product and place it at the target location. Called by ILS or TC on the MS."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:PickAndPlacePayload
+    ] .
+
+# ---- InspectionSystem workflows ----
+
+cfop:SuggestMeasurementStrategyWorkflow a owl:Class ;
+    rdfs:label "Suggest Measurement Strategy Workflow" ;
+    rdfs:comment "Return a JSON list of suitable measurement strategies for the given product. Called by PC on IS."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:MeasurementStrategyPayload
+    ] .
+
+cfop:PerformInspectionWorkflow a owl:Class ;
+    rdfs:label "Perform Inspection Workflow" ;
+    rdfs:comment "Execute the chosen measurement strategy on the product and return quality data."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:InspectionPayload
+    ] .
+
+cfop:UpdateComponentQualityWorkflow a owl:Class ;
+    rdfs:label "Update Component Quality Workflow" ;
+    rdfs:comment "Persist component quality results to the knowledge graph."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:QualityUpdatePayload
+    ] .
+
+# ---- TransformerCell workflows ----
+
+cfop:ExecuteDisassemblyWorkflow a owl:Class ;
+    rdfs:label "Execute Disassembly Workflow" ;
+    rdfs:comment "Disassemble an assembly into its sub-components. Creates new product instances in the KG and deactivates the original. Called by PC on TC."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:DisassemblyPayload
+    ] .
+
+cfop:ExecuteReprocessingWorkflow a owl:Class ;
+    rdfs:label "Execute Reprocessing Workflow" ;
+    rdfs:comment "Reprocess a component using special machines (additive or subtractive). Called by PC on TC."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:ReprocessPayload
+    ] .
+
+cfop:ReceiveCommandWorkflow a owl:Class ;
+    rdfs:label "Receive Command Workflow" ;
+    rdfs:comment "Receive a command (product, component, process) from PC or the Plan Healer and queue it for execution."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:CommandPayload
+    ] .
+
+cfop:OpenDoorWorkflow a owl:Class ;
+    rdfs:label "Open Door Workflow" ;
+    rdfs:comment "Open the Transformer Cell door to allow ILS access."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:DoorControlPayload
+    ] .
+
+cfop:CloseDoorWorkflow a owl:Class ;
+    rdfs:label "Close Door Workflow" ;
+    rdfs:comment "Close the Transformer Cell door after ILS handover is complete."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:DoorControlPayload
+    ] .
+
+cfop:QueryMachineStatusWorkflow a owl:Class ;
+    rdfs:label "Query Machine Status Workflow" ;
+    rdfs:comment "Request the current capacity/availability status of a SpecialMachine."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:MachineStatusPayload
+    ] .
+
+# ---- ProductionControl workflows ----
+
+cfop:ReceiveQualityUpdateWorkflow a owl:Class ;
+    rdfs:label "Receive Quality Update Workflow" ;
+    rdfs:comment "Called by IS or TC on PC to deliver quality measurement results and trigger the next decision."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:QualityUpdatePayload
+    ] .
+
+cfop:ReceiveOperationCompleteWorkflow a owl:Class ;
+    rdfs:label "Receive Operation Complete Workflow" ;
+    rdfs:comment "Called by TC or ILS on PC to report that a station-level operation has finished."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:OperationStatusPayload
+    ] .
+
+# ---- PlanHealer workflows ----
+
+cfop:ReceiveStatusUpdateWorkflow a owl:Class ;
+    rdfs:label "Receive Status Update Workflow" ;
+    rdfs:comment "Called by TC on PH to report success or failure of a command. A failure triggers plan healing."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:StatusUpdatePayload
+    ] .
+
+# ---- SpecialMachine workflows ----
+
+cfop:ExecuteSpecialMachineStepWorkflow a owl:Class ;
+    rdfs:label "Execute Special Machine Step Workflow" ;
+    rdfs:comment "Execute one reprocessing step (additive or subtractive) on a component."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:ReprocessPayload
+    ] .
+
+cfop:ReportStepResultWorkflow a owl:Class ;
+    rdfs:label "Report Step Result Workflow" ;
+    rdfs:comment "Called by SpecialMachine on TC to report the outcome of one reprocessing step and updated quality data."@en ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue cfop:QualityUpdatePayload
+    ] .
