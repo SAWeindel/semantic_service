@@ -1,0 +1,127 @@
+@prefix hw:  <http://demo.org/Handover#> .
+@prefix cfc: <http://www.sfb1574.kit.edu/core#> .
+@prefix wf:  <http://w3id.org/circularfactory/Workflow#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+# Ontology
+#################################################################
+
+hw: rdf:type owl:Ontology ;
+    owl:imports <http://w3id.org/circularfactory/Workflow> ;
+    rdfs:label "Handover Demo Ontology" ;
+    rdfs:comment "Demonstrates inter-service communication via GraphDB: a Recorder creates records and notifies a Consumer." .
+
+#################################################################
+# Classes
+#################################################################
+
+hw:Record rdf:type owl:Class ;
+    rdfs:comment "A data record produced by a Recorder and consumed by a Consumer." .
+
+hw:Recorder rdf:type owl:Class ;
+    rdfs:subClassOf cfc:Resource ;
+    rdfs:comment "A service that creates records on request and notifies the requesting Consumer." .
+
+hw:Consumer rdf:type owl:Class ;
+    rdfs:subClassOf cfc:Resource ;
+    rdfs:comment "A service that periodically requests new recordings and reads the results." .
+
+#################################################################
+# Record properties
+#################################################################
+
+hw:hasDescription rdf:type owl:DatatypeProperty ;
+    rdfs:domain hw:Record ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Human-readable description embedded in the record." .
+
+hw:hasRecordDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain hw:Record ;
+    rdfs:range xsd:string ;
+    rdfs:comment "ISO-8601 timestamp at which the record was created." .
+
+hw:hasData rdf:type owl:DatatypeProperty ;
+    rdfs:domain hw:Record ;
+    rdfs:range xsd:double ;
+    rdfs:comment "Numeric payload of the record (random float)." .
+
+#################################################################
+# Service properties
+#################################################################
+
+hw:hasRecordCount rdf:type owl:DatatypeProperty ;
+    rdfs:domain cfc:Resource ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Number of records processed by this service instance." .
+
+#################################################################
+# Workflow payload properties
+#################################################################
+
+hw:consumerServiceId rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:anyURI ;
+    rdfs:comment "IRI of the Consumer service instance to notify after record creation." .
+
+hw:description rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Description string to embed in the created record." .
+
+hw:recordId rdf:type owl:DatatypeProperty ;
+    rdfs:domain owl:Thing ;
+    rdfs:range xsd:anyURI ;
+    rdfs:comment "IRI of the Record instance to be fetched and consumed." .
+
+#################################################################
+# Payload classes
+# Each payload class uses rdfs:subClassOf owl:Restriction to declare
+# fields, matching the pattern expected by WorkflowModelBuilder._create_model().
+#################################################################
+
+# create_record payload: consumerServiceId (anyURI) + description (string)
+_:CreateRecordPayload a owl:Class ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty hw:consumerServiceId ;
+        owl:hasValue xsd:anyURI
+    ] ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty hw:description ;
+        owl:hasValue xsd:string
+    ] .
+
+# consume_record payload: recordId (anyURI)
+_:ConsumeRecordPayload a owl:Class ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty hw:recordId ;
+        owl:hasValue xsd:anyURI
+    ] .
+
+#################################################################
+# Workflow classes
+#################################################################
+
+hw:CreateRecordWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:CreateRecordPayload
+    ] ;
+    rdfs:comment "Asynchronously creates a hw:Record and notifies the requesting Consumer." .
+
+hw:ConsumeRecordWorkflow rdf:type owl:Class ;
+    rdfs:subClassOf wf:Workflow ;
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:onProperty wf:accepts ;
+        owl:hasValue _:ConsumeRecordPayload
+    ] ;
+    rdfs:comment "Fetches a hw:Record from GraphDB by IRI and prints its contents." .
