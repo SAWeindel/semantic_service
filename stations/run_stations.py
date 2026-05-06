@@ -141,7 +141,7 @@ def create_instances(ogm: OGM) -> None:
         (PH_ID,  RDF_TYPE, IRI(f"{CFOP}PlanHealer")),
         (SM_ID,  RDF_TYPE, IRI(f"{CFOP}SpecialMachine")),
     ]
-    ogm.db.triples_add(triples, named_graph=NAMED_GRAPH)
+    ogm.db.triples_add(triples, named_graph=NAMED_GRAPH) # type: ignore
     logger.info("Station instance triples written to <%s>", NAMED_GRAPH)
 
 
@@ -317,7 +317,7 @@ def main() -> None:
 
     # Block on PC server thread
     try:
-        pc.server_thread.join()
+        pc.server_thread.join() # type: ignore
     except KeyboardInterrupt:
         _shutdown()
 
