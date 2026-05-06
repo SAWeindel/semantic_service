@@ -42,6 +42,7 @@ import signal
 import sys
 import time
 
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
@@ -58,7 +59,7 @@ from transformer_cell import TransformerCell
 from plan_healer import PlanHealer
 from special_machine import SpecialMachine
 
-TriplesLike = list[tuple[IRI, IRI, IRI]]
+
 
 # ---------------------------------------------------------------------------
 # Namespace constants
@@ -131,7 +132,7 @@ def upload_ontologies(db) -> None:
 
 def create_instances(ogm: OGM) -> None:
     ogm.db.clear_graph(NAMED_GRAPH)
-    triples: TriplesLike = [
+    triples  = [
         (PC_ID,  RDF_TYPE, IRI(f"{CFOP}ProductionControl")),
         (ILS_ID, RDF_TYPE, IRI(f"{CFOP}IntralogisticSystem")),
         (MS_ID,  RDF_TYPE, IRI(f"{CFOP}ManipulationSystem")),
