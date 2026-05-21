@@ -32,9 +32,9 @@ python = "^3.12"
 streamlit = "^1.55.0"
 streamlit-autorefresh = "^1.0.1"
 matplotlib = "^3.10.8"
-graph_db_interface = { git = "https://github.com/SAWeindel/graph_db_interface.git", branch = "hackathon" }
-kapps-ogm = { git = "https://github.com/SAWeindel/kapps_ogm.git", branch = "hackathon" }
-semantic-middleware = { git = "https://github.com/SAWeindel/semantic_middleware.git", branch = "hackathon"}
+graph_db_interface = { git = "https://github.com/SAWeindel/graph_db_interface.git", rev = "748a4e14270dac0ea237f97d878ac1981820ad3b" }
+kapps-ogm = { git = "https://github.com/SAWeindel/kapps_ogm.git", rev = "5f5cef6171e4b8300b385dc8f2f7ac518dab3774" }
+semantic-middleware = { git = "https://github.com/SAWeindel/semantic_middleware.git", rev = "e11efd68eb855fa3baae67664b9c62c857d51069" }
 
 
 [tool.poetry.group.dev.dependencies]
